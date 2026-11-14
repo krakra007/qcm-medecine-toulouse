@@ -55,7 +55,6 @@
         .input-group { display: flex; gap: 8px; align-items: stretch; }
         .input-group input { flex: 1; }
 
-        /* Zone PDF bien visible */
         .dropzone {
             border: 2px dashed var(--primary); border-radius: 12px; padding: 24px 20px; text-align: center;
             background: #f8fafc; cursor: pointer; transition: all 0.2s ease;
@@ -64,10 +63,9 @@
         .dropzone-title { color: var(--primary); font-weight: 700; font-size: 1.02rem; margin-bottom: 8px; }
         .dropzone-sub { color: var(--muted); font-size: 0.88rem; margin-top: 8px; display: block; }
 
-        /* Grille des chapitres détectés */
         .chapters-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-            gap: 12px; margin-top: 12px; max-height: 380px; overflow-y: auto; padding-right: 4px;
+            gap: 12px; margin-top: 12px; max-height: 400px; overflow-y: auto; padding-right: 4px;
         }
         .chapter-card {
             display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
@@ -118,7 +116,6 @@
         .status.error { display: block; background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
         .status.success { display: block; background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
 
-        /* Quiz & Corrections */
         .quiz-header {
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
             background: var(--primary-light); padding: 14px 18px; border-radius: 10px; margin-bottom: 20px;
@@ -176,7 +173,7 @@
         <button type="button" class="btn btn-outline" style="background:white;" onclick="toggleConfig()">⚙️ Afficher / Masquer Clé API</button>
     </header>
 
-    <!-- 1. Configuration API (toujours visible par défaut tant qu'aucune clé n'est enregistrée) -->
+    <!-- 1. Configuration API -->
     <div id="configCard" class="card">
         <h2>
             <span>Étape 1 : Renseigner votre clé API Google Gemini</span>
@@ -224,7 +221,10 @@
         <div id="chaptersSection" class="hidden" style="margin-top: 22px;">
             <h2 style="margin-bottom: 8px;">
                 <span>Étape 3 : Choisir le chapitre à réviser</span>
-                <span id="chapterCountBadge" style="font-size: 0.85rem; font-weight: 600; color: var(--muted);"></span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="chapterCountBadge" style="font-size: 0.85rem; font-weight: 600; color: var(--muted);"></span>
+                    <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="reAnalyzeChapters()" title="Relancer la détection des chapitres">🔄 Re-détecter</button>
+                </div>
             </h2>
             <p style="margin: 0 0 10px 0; font-size: 0.88rem; color: var(--muted);">
                 Cochez un chapitre ci-dessous (les pages correspondantes sont sélectionnées automatiquement) :
@@ -308,7 +308,6 @@
             showStatus('apiStatus', 'Clé API prête et enregistrée dans ce navigateur.', 'success');
         }
 
-        // Glisser-déposer (Drag & Drop)
         const dz = document.getElementById('dropzone');
         dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
@@ -320,7 +319,6 @@
             }
         });
 
-        // Support du Ctrl+V / Cmd+V pour coller directement un fichier PDF copié
         window.addEventListener('paste', (e) => {
             if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
                 const file = e.clipboardData.files[0];
@@ -390,6 +388,14 @@
         }
     }
 
+    async function reAnalyzeChapters() {
+        if (!currentPdfDoc) return;
+        showStatus('genStatus', 'Nouvelle analyse de la structure du document en cours...', 'info');
+        detectedChapters = await detectChapters(currentPdfDoc, currentPdfDoc.numPages);
+        renderChaptersList(detectedChapters);
+        showStatus('genStatus', `${detectedChapters.length} chapitre(s) identifié(s).`, 'success');
+    }
+
     async function processPdfFile(file) {
         if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
             showStatus('genStatus', 'Veuillez sélectionner un fichier au format PDF.', 'error');
@@ -425,10 +431,43 @@
         }
     }
 
+    // Reconstruit les lignes exactes d'une page PDF à partir des coordonnées Y
+    async function extractPageLines(pdfDoc, pageNum) {
+        const page = await pdfDoc.getPage(pageNum);
+        const content = await page.getTextContent();
+        const lines = [];
+        let currentLine = '';
+        let lastY = null;
+        let maxFontSize = 0;
+
+        for (const item of content.items) {
+            const text = item.str;
+            if (!text) continue;
+            const y = item.transform ? item.transform[5] : null;
+            const fontSize = item.transform ? Math.abs(item.transform[3]) : 0;
+
+            if (lastY !== null && y !== null && Math.abs(y - lastY) > 4.5) {
+                if (currentLine.trim()) {
+                    lines.push({ text: currentLine.trim(), fontSize: maxFontSize });
+                }
+                currentLine = text;
+                maxFontSize = fontSize;
+            } else {
+                currentLine += (currentLine && !currentLine.endsWith(' ') && !text.startsWith(' ') ? ' ' : '') + text;
+                if (fontSize > maxFontSize) maxFontSize = fontSize;
+            }
+            if (y !== null) lastY = y;
+        }
+        if (currentLine.trim()) {
+            lines.push({ text: currentLine.trim(), fontSize: maxFontSize });
+        }
+        return lines;
+    }
+
     async function detectChapters(pdfDoc, totalPages) {
         let chapters = [];
 
-        // 1. Signets internes du PDF
+        // 1. Signets internes du PDF (Outline / Bookmarks)
         try {
             const outline = await pdfDoc.getOutline();
             if (outline && outline.length > 0) {
@@ -456,23 +495,61 @@
             }
         } catch (e) {}
 
-        // 2. Extraction des 5 premières pages (Sommaire)
+        // 2. Extraction ligne par ligne des 8 premières pages (Sommaire) + repérage des titres principaux par page
         let frontMatterText = '';
-        const pagesToScan = Math.min(5, totalPages);
+        const pagesToScan = Math.min(8, totalPages);
         for (let p = 1; p <= pagesToScan; p++) {
-            const page = await pdfDoc.getPage(p);
-            const content = await page.getTextContent();
-            frontMatterText += `\n[Page ${p}]\n` + content.items.map(it => it.str).join(' ');
+            const lines = await extractPageLines(pdfDoc, p);
+            frontMatterText += `\n=== PAGE PDF ${p} ===\n` + lines.map(l => l.text).join('\n');
         }
 
-        // Analyse IA du sommaire si clé API présente
+        // Repérage des gros titres de début de cours à travers le PDF (utile pour caler les numéros de pages réels)
+        const pageHeadings = [];
+        const stepSample = totalPages > 120 ? 2 : 1;
+        for (let p = 1; p <= totalPages; p += stepSample) {
+            const lines = await extractPageLines(pdfDoc, p);
+            const topLines = lines.slice(0, 6);
+            for (const l of topLines) {
+                if (l.fontSize >= 13 && l.text.length >= 5 && l.text.length <= 100 && !/^(page|\d+)$/i.test(l.text)) {
+                    pageHeadings.push(`Page PDF ${p}: ${l.text}`);
+                    break;
+                }
+            }
+        }
+
+        // 3. Détection locale par expression régulière sur le sommaire (ligne par ligne)
+        const regexMatches = [];
+        const linesArray = frontMatterText.split('\n');
+        const linePattern = /^(.{4,85}?)\s*(?:\.{2,}|\s{2,}|–|-|p\.)\s*(\d{1,3})\s*$/i;
+        for (const line of linesArray) {
+            const cleanLine = line.trim();
+            const match = linePattern.exec(cleanLine);
+            if (match) {
+                const title = match[1].replace(/\.+$/, '').trim();
+                const pageNum = parseInt(match[2], 10);
+                if (pageNum >= 1 && pageNum <= totalPages && title.length >= 4 && !/^(page|sommaire|table des matières)/i.test(title)) {
+                    regexMatches.push({ title, startPage: pageNum });
+                }
+            }
+        }
+
+        // 4. Analyse via Gemini Flash si clé API disponible (en fournissant le sommaire structuré + repères de pages réels)
         const apiKey = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_api_key');
-        if (apiKey && frontMatterText.trim().length > 100) {
+        if (apiKey && frontMatterText.trim().length > 80) {
             try {
-                const tocPrompt = `Analyse le début de ce polycopié / ronéo de médecine (${totalPages} pages au total) et extrais la liste exacte des chapitres ou cours avec leur page de début et page de fin.
-Si un sommaire est présent, déduis les plages de pages exactes (sans dépasser ${totalPages}).
-Texte des premières pages :
-${frontMatterText.slice(0, 14000)}`;
+                const tocPrompt = `Tu analyses un polycopié / ronéo de médecine qui comporte exactement ${totalPages} pages PDF au total.
+Extrais la liste complète des chapitres / cours principaux avec leur numéro de page PDF de début (startPage) et de fin (endPage).
+RÈGLES IMPORTANTES :
+- Utilise en priorité le Sommaire / Table des matières présent dans les premières pages ci-dessous.
+- Vérifie s'il existe un décalage entre la numérotation imprimée du sommaire et les numéros de PAGE PDF réels grâce aux repères de titres détectés dans le document.
+- Chaque chapitre doit se suivre logiquement sans chevauchement inutile, et endPage ne doit jamais dépasser ${totalPages}.
+- Ne découpe pas en sous-paragraphes minuscules : garde les grands chapitres ou cours du document.
+
+DÉBUT DU DOCUMENT (PAGES 1 À ${pagesToScan}) :
+${frontMatterText.slice(0, 16000)}
+
+REPÈRES DE TITRES DÉTECTÉS DANS LE PDF :
+${pageHeadings.slice(0, 80).join('\n')}`;
 
                 const schema = {
                     type: "ARRAY",
@@ -504,29 +581,18 @@ ${frontMatterText.slice(0, 14000)}`;
                 if (resp.ok) {
                     const data = await resp.json();
                     const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        return parsed.map(c => ({
-                            title: c.title,
-                            startPage: Math.max(1, Math.min(totalPages, c.startPage)),
-                            endPage: Math.max(1, Math.min(totalPages, c.endPage))
-                        }));
+                    if (Array.isArray(parsed) && parsed.length >= 2) {
+                        return parsed.map(c => {
+                            const s = Math.max(1, Math.min(totalPages, c.startPage));
+                            const e = Math.max(s, Math.min(totalPages, c.endPage));
+                            return { title: c.title, startPage: s, endPage: e };
+                        });
                     }
                 }
             } catch (e) {}
         }
 
-        // 3. Détection par motifs textuels (ex: "Titre du cours .... 12")
-        const regexMatches = [];
-        const linePattern = /([A-ZÀ-Ÿ0-9][^\n]{4,70}?)\s*(?:\.{2,}|\s{2,}|–|-)\s*(\d{1,3})\b/g;
-        let match;
-        while ((match = linePattern.exec(frontMatterText)) !== null) {
-            const title = match[1].trim();
-            const pageNum = parseInt(match[2], 10);
-            if (pageNum >= 1 && pageNum <= totalPages && !/page|sommaire/i.test(title)) {
-                regexMatches.push({ title, startPage: pageNum });
-            }
-        }
-
+        // Si Gemini n'a pas renvoyé au moins 2 chapitres, utiliser les correspondances regex du sommaire
         if (regexMatches.length >= 2) {
             regexMatches.sort((a, b) => a.startPage - b.startPage);
             for (let i = 0; i < regexMatches.length; i++) {
@@ -536,7 +602,7 @@ ${frontMatterText.slice(0, 14000)}`;
             return chapters;
         }
 
-        // 4. Découpage par tranches de 15 pages si aucun sommaire n'est détecté
+        // 5. Fallback : découpage propre par tranches de 15 pages
         const step = 15;
         for (let p = 1; p <= totalPages; p += step) {
             const endP = Math.min(totalPages, p + step - 1);
@@ -584,9 +650,8 @@ ${frontMatterText.slice(0, 14000)}`;
     async function extractTextFromPages(start, end) {
         let extractedText = '';
         for (let p = start; p <= end; p++) {
-            const page = await currentPdfDoc.getPage(p);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
+            const lines = await extractPageLines(currentPdfDoc, p);
+            const pageText = lines.map(l => l.text).join('\n');
             extractedText += `\n--- PAGE ${p} ---\n${pageText}`;
         }
         return extractedText;
