@@ -1,384 +1,838 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QCM médecine</title>
-<style>
-:root{color-scheme:light;--ink:#17283c;--quiet:#48596a;--line:#d5e0e8;--blue:#165e76;--paper:#fff;--bg:#f1f6f8;--good:#145640;--bad:#942e35}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.55 system-ui,sans-serif}
-header{background:#102b3b;color:white}
-.header,main{max-width:54rem;margin:auto;padding:1.15rem clamp(1rem,4vw,2rem)}
-.header{display:flex;gap:.7rem 1.4rem;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.brand{font-weight:750;letter-spacing:.015em;font-size:1.2rem}
-header button{background:transparent;color:white;border-color:#7194a5}
-main{padding-top:1.8rem;padding-bottom:2.5rem}
-h1,h2,h3,p{margin-top:0}
-h1{font-size:clamp(1.9rem,6vw,2.8rem);line-height:1.12;letter-spacing:-.035em;margin-bottom:.5rem}
-h2{font-size:1.38rem;line-height:1.35}
-h3{font-size:1.08rem;line-height:1.42}
-.muted,.ref{color:var(--quiet)}
-.progress-row{display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem;color:var(--quiet);font-size:.93rem}
-progress{width:100%;height:.5rem;display:block;accent-color:var(--blue);margin-bottom:1.1rem}
-.card,details{background:var(--paper);border:1px solid var(--line);border-radius:1rem;padding:clamp(1rem,4vw,1.65rem)}
-.card{box-shadow:0 5px 18px #142f4010}
-.option,.review{border:1px solid var(--line);border-radius:.65rem;padding:.72rem .85rem;margin:.55rem 0;overflow-wrap:anywhere}
-.option{display:flex;gap:.65rem;align-items:flex-start;cursor:pointer}
-.option:has(input:checked){background:#e6f4f9;border-color:var(--blue)}
-.option:hover{border-color:var(--blue)}
-input[type=checkbox]{width:1.15rem;height:1.15rem;flex:none;margin:.23rem 0 0;accent-color:var(--blue)}
-.letter{font-weight:750;min-width:1.25rem}
-.actions,.tabs{display:flex;gap:.55rem;flex-wrap:wrap}
-.actions{margin-top:1.2rem;justify-content:space-between}
-.tabs{margin-bottom:.9rem}
-button{font:inherit;font-weight:650;cursor:pointer;padding:.47rem .85rem;border:1px solid var(--line);background:white;color:var(--ink);border-radius:.58rem;min-height:2.6rem}
-button:disabled{opacity:.5;cursor:default}
-.primary,.tabs button[aria-current=true]{color:white;background:var(--blue);border-color:var(--blue)}
-.tabs button[data-answered=true]:not([aria-current=true]){background:#dceef3;border-color:#8cb9c6}
-:focus-visible{outline:3px solid #247897;outline-offset:3px}
-details{margin-top:1.15rem}
-summary{cursor:pointer;font-weight:700}
-details p{margin-top:.9rem}
-textarea{width:100%;min-height:8rem;font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:.55rem;padding:.7rem}
-label[for=bank-text]{display:block;margin-top:1rem;font-weight:650}
-.status{color:var(--bad);margin:0}
-.status:not(:empty){margin:.65rem 0}
-.review.correct{border-left:4px solid var(--good)}
-.review.error{border-left:4px solid var(--bad)}
-.review p{margin:.3rem 0 0}
-.ref{font-size:.9rem}
-.review-section+.review-section{margin-top:1.5rem}
-dialog{width:min(31rem,calc(100% - 2rem));color:var(--ink);border:1px solid var(--line);border-radius:.9rem;padding:1.25rem}
-dialog::backdrop{background:#102b3b80}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur QCM Médecine — D1 Toulouse</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root {
+            --primary: #0f4c81;
+            --primary-hover: #0a365c;
+            --primary-light: #e8f1f8;
+            --success: #15803d;
+            --success-bg: #dcfce7;
+            --warning: #b45309;
+            --warning-bg: #fef3c7;
+            --danger: #b91c1c;
+            --danger-bg: #fee2e2;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.5; }
+        .container { max-width: 960px; margin: 0 auto; }
+
+        header {
+            background: linear-gradient(135deg, #0f4c81 0%, #1e3a8a 100%);
+            color: white; padding: 20px 26px; border-radius: 14px;
+            margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        header h1 { margin: 0; font-size: 1.4rem; }
+        header span { font-size: 0.88rem; opacity: 0.9; display: block; margin-top: 3px; }
+
+        .card {
+            background: var(--card); border-radius: 14px; padding: 22px 24px; margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid var(--border);
+        }
+        .card h2 {
+            margin-top: 0; font-size: 1.12rem; color: var(--primary);
+            border-bottom: 2px solid var(--primary-light); padding-bottom: 9px; margin-bottom: 14px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+        }
+
+        label.field-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #334155; }
+        input[type="text"], input[type="password"], input[type="number"], select {
+            width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.95rem;
+            background: #fff; color: var(--text);
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.12); }
+
+        .input-group { display: flex; gap: 8px; align-items: stretch; }
+        .input-group input { flex: 1; }
+
+        /* Zone PDF bien visible */
+        .dropzone {
+            border: 2px dashed var(--primary); border-radius: 12px; padding: 24px 20px; text-align: center;
+            background: #f8fafc; cursor: pointer; transition: all 0.2s ease;
+        }
+        .dropzone:hover, .dropzone.dragover { background: var(--primary-light); }
+        .dropzone-title { color: var(--primary); font-weight: 700; font-size: 1.02rem; margin-bottom: 8px; }
+        .dropzone-sub { color: var(--muted); font-size: 0.88rem; margin-top: 8px; display: block; }
+
+        /* Grille des chapitres détectés */
+        .chapters-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 12px; margin-top: 12px; max-height: 380px; overflow-y: auto; padding-right: 4px;
+        }
+        .chapter-card {
+            display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+            border: 1.5px solid var(--border); border-radius: 10px; background: #ffffff;
+            cursor: pointer; transition: all 0.15s ease; user-select: none;
+        }
+        .chapter-card:hover { border-color: var(--primary); background: #f8fafc; }
+        .chapter-card.selected {
+            border-color: var(--primary); background: var(--primary-light);
+            box-shadow: 0 2px 6px rgba(15, 76, 129, 0.12);
+        }
+        .chapter-card input[type="radio"] {
+            margin-top: 3px; accent-color: var(--primary); transform: scale(1.2); cursor: pointer; flex-shrink: 0;
+        }
+        .chapter-info { flex: 1; min-width: 0; }
+        .chapter-title { font-weight: 600; font-size: 0.92rem; color: var(--text); word-wrap: break-word; }
+        .chapter-pages {
+            display: inline-block; margin-top: 5px; font-size: 0.78rem; font-weight: 600;
+            color: var(--primary); background: #dbeafe; padding: 2px 8px; border-radius: 12px;
+        }
+
+        .controls-bar {
+            display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
+            margin-top: 18px; padding-top: 16px; border-top: 1px solid #e2e8f0;
+        }
+        .control-group { min-width: 130px; }
+
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 9px;
+            font-weight: 600; cursor: pointer; font-size: 0.93rem; transition: all 0.15s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) { background: var(--primary-hover); }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-secondary { background: #475569; }
+        .btn-secondary:hover:not(:disabled) { background: #334155; }
+        .btn-success { background: var(--success); }
+        .btn-success:hover:not(:disabled) { background: #166534; }
+        .btn-outline { background: #ffffff; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-outline:hover:not(:disabled) { background: var(--primary-light); }
+
+        .api-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .api-bar > div.key-col { flex: 2; min-width: 260px; }
+        .api-bar > div.model-col { flex: 1; min-width: 200px; }
+
+        .status { padding: 11px 14px; border-radius: 9px; margin-top: 12px; font-size: 0.9rem; display: none; font-weight: 500; }
+        .status.info { display: block; background: var(--primary-light); color: var(--primary); border: 1px solid #bfdbfe; }
+        .status.error { display: block; background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+        .status.success { display: block; background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
+
+        /* Quiz & Corrections */
+        .quiz-header {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+            background: var(--primary-light); padding: 14px 18px; border-radius: 10px; margin-bottom: 20px;
+            font-weight: 700; color: var(--primary); border: 1px solid #bfdbfe;
+        }
+        .qcm-block {
+            border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff;
+        }
+        .qcm-title { font-weight: 700; font-size: 1.04rem; margin-bottom: 14px; color: #0f172a; }
+
+        .option-item {
+            display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 9px; margin-bottom: 9px; cursor: pointer; transition: all 0.15s;
+        }
+        .option-item:hover { background: #f8fafc; border-color: #94a3b8; }
+        .option-item input[type="checkbox"] {
+            margin-top: 3px; transform: scale(1.25); accent-color: var(--primary); cursor: pointer; flex-shrink: 0;
+        }
+        .option-item.checked-active { background: #eff6ff; border-color: var(--primary); }
+
+        .option-item.correct-checked { background: var(--success-bg); border-color: var(--success); }
+        .option-item.missed-correct { background: var(--warning-bg); border-color: #d97706; }
+        .option-item.wrong-checked { background: var(--danger-bg); border-color: var(--danger); }
+
+        .badge-tag {
+            font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin-left: auto; white-space: nowrap;
+        }
+        .tag-ok { background: #16a34a; color: white; }
+        .tag-miss { background: #d97706; color: white; }
+        .tag-err { background: #dc2626; color: white; }
+
+        .correction-box {
+            margin-top: 16px; padding: 15px 18px; background: #f8fafc; border-left: 4px solid var(--primary);
+            border-radius: 8px; font-size: 0.92rem; display: none;
+        }
+        .score-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;
+        }
+        .score-1 { background: var(--success-bg); color: var(--success); }
+        .score-05 { background: var(--warning-bg); color: var(--warning); }
+        .score-02 { background: #ffedd5; color: #c2410c; }
+        .score-0 { background: var(--danger-bg); color: var(--danger); }
+
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
-<header><div class="header">
-  <span class="brand">QCM médecine</span>
-  <button id="open-import" type="button">Importer une série</button>
-</div></header>
-<main>
-  <h1 id="title"></h1>
-  <p id="source" class="muted"></p>
-  <div id="quiz"></div>
-  <details id="import">
-    <summary>Créer une série à partir d’un nouveau PDF</summary>
-    <p>Joins ton PDF à une conversation ChatGPT, indique le chapitre et colle la consigne ci-dessous. Importe ensuite le fichier JSON obtenu ou colle son contenu ici.</p>
-    <button id="copy" type="button">Copier la consigne</button>
-    <textarea id="prompt" readonly aria-label="Consigne pour ChatGPT" hidden></textarea>
-    <p id="copy-status" class="status" role="status"></p>
-    <label for="bank-file">Fichier de questions (.json)</label>
-    <input id="bank-file" type="file" accept=".json,application/json">
-    <label for="bank-text">Ou coller le JSON</label>
-    <textarea id="bank-text" placeholder="Colle ici le contenu généré par ChatGPT."></textarea>
-    <button id="load-text" type="button">Charger le JSON collé</button>
-    <p id="import-status" class="status" role="status"></p>
-  </details>
-</main>
-<dialog id="confirm">
-  <h2>Terminer la série</h2>
-  <p id="confirm-text"></p>
-  <form method="dialog" class="actions">
-    <button value="cancel" autofocus>Revenir au quiz</button>
-    <button value="grade" class="primary">Voir le corrigé</button>
-  </form>
-</dialog>
-<script type="application/json" id="initial-bank">{
-  "version": 1,
-  "titre": "Vision et audition",
-  "source": "Ronéo 2 · Biophysique sensorielle, vision et audition (suite)",
-  "questions": [
-    {
-      "enonce": "À propos de l’hypermétropie, en l’absence d’accommodation, quelles propositions sont exactes ?",
-      "propositions": [
-        {"texte":"L’œil est insuffisamment convergent par rapport à sa longueur.","vrai":true,"explication":"Dans le modèle du cours, la puissance de l’œil est insuffisante pour focaliser sur la rétine les rayons issus d’un objet à l’infini.","page":6},
-        {"texte":"Les rayons issus d’un objet à l’infini convergeraient en avant de la rétine.","vrai":false,"explication":"Le foyer image se trouve en arrière de la rétine en l’absence d’accommodation.","page":6},
-        {"texte":"Le punctum remotum est virtuel.","vrai":true,"explication":"Le cours le situe théoriquement en arrière de l’œil.","page":6},
-        {"texte":"Une lentille divergente compense le défaut de convergence.","vrai":false,"explication":"La correction de l’hypermétropie fait appel à une lentille convergente.","page":7},
-        {"texte":"Le degré d’hypermétropie est exprimé par une valeur positive.","vrai":true,"explication":"Le cours attribue un signe positif à l’hypermétropie et un signe négatif à la myopie.","page":6}
-      ]
-    },
-    {
-      "enonce": "Une personne emmétrope devient presbyte. Quelles évolutions sont compatibles avec le mécanisme décrit dans le cours ?",
-      "propositions": [
-        {"texte":"Le cristallin perd progressivement de sa souplesse.","vrai":true,"explication":"La diminution de la plasticité du cristallin participe à la baisse du pouvoir accommodatif.","page":8},
-        {"texte":"Le point le plus proche vu net se rapproche de l’œil.","vrai":false,"explication":"Le punctum proximum s’éloigne lorsque l’amplitude accommodative diminue.","page":8},
-        {"texte":"Le punctum remotum se rapproche du fait de la seule presbytie.","vrai":false,"explication":"Dans le modèle décrit, le punctum remotum reste inchangé tandis que le punctum proximum s’éloigne.","page":8},
-        {"texte":"Une lentille convergente peut faciliter la lecture de près.","vrai":true,"explication":"Elle forme une image que le sujet peut voir nette dans sa plage d’accommodation.","page":9},
-        {"texte":"La gêne en vision de près s’explique par une augmentation de l’amplitude accommodative.","vrai":false,"explication":"La gêne résulte d’une baisse de l’amplitude accommodative.","page":8}
-      ]
-    },
-    {
-      "enonce": "Concernant l’astigmatisme régulier, quelles propositions sont exactes ?",
-      "propositions": [
-        {"texte":"La puissance du dioptre est identique dans les deux méridiens principaux.","vrai":false,"explication":"La puissance varie selon le méridien dans un œil astigmate.","page":9},
-        {"texte":"Les deux méridiens principaux sont perpendiculaires.","vrai":true,"explication":"Le cours décrit deux méridiens principaux orthogonaux dans l’astigmatisme régulier.","page":9},
-        {"texte":"Le degré d’astigmatisme correspond à la somme des puissances des deux méridiens principaux.","vrai":false,"explication":"Il correspond à leur différence dioptrique.","page":10},
-        {"texte":"Une correction torique possède la même puissance dans tous les axes.","vrai":false,"explication":"Sa puissance varie avec l’axe pour compenser la différence de réfraction entre les méridiens.","page":10},
-        {"texte":"Le faisceau réfracté converge d’emblée vers un unique point image.","vrai":false,"explication":"Le cours décrit deux focales dans l’astigmatisme régulier.","page":9}
-      ]
-    },
-    {
-      "enonce": "À propos de la transmission du son vers l’oreille interne, quelles propositions sont exactes ?",
-      "propositions": [
-        {"texte":"La chaîne des osselets intervient dans l’adaptation d’impédance.","vrai":true,"explication":"Les osselets participent à la transmission mécanique dans l’oreille moyenne.","page":10},
-        {"texte":"Le rapport de surface entre le tympan et la fenêtre ovale intervient dans cette adaptation.","vrai":true,"explication":"La différence entre ces surfaces contribue à l’augmentation de pression à la fenêtre ovale.","page":10},
-        {"texte":"L’adaptation d’impédance assurée par les osselets se fait dans la cochlée.","vrai":false,"explication":"Cette adaptation est assurée par des structures de l’oreille moyenne. La cochlée appartient à l’oreille interne.","page":10},
-        {"texte":"La différence de densité entre l’air et l’os suffit à définir le phénomène décrit.","vrai":false,"explication":"Le corrigé identifie une différence d’impédance acoustique.","page":10},
-        {"texte":"Le tympan fait partie des structures impliquées dans le mécanisme.","vrai":true,"explication":"Sa surface intervient par rapport à celle de la fenêtre ovale.","page":10}
-      ]
-    },
-    {
-      "enonce": "À propos de l’organisation de la cochlée, quelles propositions sont exactes ?",
-      "synthese": "toutes_fausses",
-      "propositions": [
-        {"texte":"La cochlée appartient à l’oreille moyenne.","vrai":false,"explication":"La cochlée est située dans l’oreille interne.","page":11},
-        {"texte":"Les membranes de Reissner et basilaire délimitent seulement deux étages.","vrai":false,"explication":"Les deux membranes délimitent trois étages.","page":10},
-        {"texte":"L’organe de Corti repose sur la membrane tectoriale.","vrai":false,"explication":"L’organe de Corti repose sur la membrane basilaire.","page":11},
-        {"texte":"Le nerf auditif transmet les variations de pression sous forme de vibrations mécaniques.","vrai":false,"explication":"L’information est véhiculée dans le nerf auditif sous forme de potentiels d’action.","page":10}
-      ]
-    }
-  ]
-}
-</script>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Entraînement QCM — Médecine D1 (Toulouse)</h1>
+            <span>Détection automatique des chapitres • 10 QCM ciblés • Correction détaillée &amp; barème à discordances</span>
+        </div>
+        <button type="button" class="btn btn-outline" style="background:white;" onclick="toggleConfig()">⚙️ Afficher / Masquer Clé API</button>
+    </header>
+
+    <!-- 1. Configuration API (toujours visible par défaut tant qu'aucune clé n'est enregistrée) -->
+    <div id="configCard" class="card">
+        <h2>
+            <span>Étape 1 : Renseigner votre clé API Google Gemini</span>
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">Obtenir une clé sur Google AI Studio ↗</a>
+        </h2>
+        <div class="api-bar">
+            <div class="key-col">
+                <label class="field-label" for="apiKeyInput">Collez votre clé API ici (commence par AIzaSy...)</label>
+                <div class="input-group">
+                    <input type="text" id="apiKeyInput" placeholder="AIzaSy...">
+                    <button type="button" class="btn btn-outline" onclick="pasteApiKey()" title="Coller depuis le presse-papiers">📋 Coller</button>
+                </div>
+            </div>
+            <div class="model-col">
+                <label class="field-label" for="modelSelect">Modèle IA</label>
+                <select id="modelSelect">
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Rapide)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Approfondi)</option>
+                </select>
+            </div>
+            <button type="button" class="btn" onclick="saveApiKey()">💾 Enregistrer la clé</button>
+            <button type="button" class="btn btn-secondary" onclick="copyShareLink()" title="Génère un lien contenant la clé pour l'envoyer sur le Mac">🔗 Copier lien pour Mac</button>
+        </div>
+        <div id="apiStatus" class="status"></div>
+    </div>
+
+    <!-- 2. Import PDF & Sélection du Chapitre -->
+    <div class="card">
+        <h2>
+            <span>Étape 2 : Charger votre fichier PDF de cours</span>
+            <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="document.getElementById('jsonImport').click()">📂 Ouvrir un quiz sauvegardé (.json)</button>
+            <input type="file" id="jsonImport" accept=".json" class="hidden" onchange="importJsonQuiz(event)">
+        </h2>
+
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('pdfInput').click()">
+            <div class="dropzone-title">📄 Glissez-déposez votre fichier PDF ici</div>
+            <button type="button" class="btn" onclick="event.stopPropagation(); document.getElementById('pdfInput').click();">
+                📁 Parcourir l'ordinateur et choisir un PDF
+            </button>
+            <span class="dropzone-sub" id="pdfInfo">Vous pouvez aussi faire Ctrl+V (ou Cmd+V) après avoir copié un fichier PDF.</span>
+            <input type="file" id="pdfInput" accept="application/pdf,.pdf" class="hidden" onchange="handlePdfUpload(event)">
+        </div>
+
+        <!-- Liste des chapitres reconnus -->
+        <div id="chaptersSection" class="hidden" style="margin-top: 22px;">
+            <h2 style="margin-bottom: 8px;">
+                <span>Étape 3 : Choisir le chapitre à réviser</span>
+                <span id="chapterCountBadge" style="font-size: 0.85rem; font-weight: 600; color: var(--muted);"></span>
+            </h2>
+            <p style="margin: 0 0 10px 0; font-size: 0.88rem; color: var(--muted);">
+                Cochez un chapitre ci-dessous (les pages correspondantes sont sélectionnées automatiquement) :
+            </p>
+
+            <div id="chaptersGrid" class="chapters-grid"></div>
+
+            <div class="controls-bar">
+                <div class="control-group">
+                    <label class="field-label" for="startPage">Page début</label>
+                    <input type="number" id="startPage" min="1" value="1">
+                </div>
+                <div class="control-group">
+                    <label class="field-label" for="endPage">Page fin</label>
+                    <input type="number" id="endPage" min="1" value="15">
+                </div>
+                <div class="control-group">
+                    <label class="field-label" for="qcmCount">Nombre de QCM</label>
+                    <select id="qcmCount">
+                        <option value="5">5 QCM (Flash)</option>
+                        <option value="10" selected>10 QCM (Standard)</option>
+                        <option value="15">15 QCM (Complet)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                    <button type="button" id="generateBtn" class="btn" style="width: 100%; padding: 12px 20px;" onclick="generateQCM()">
+                        ✨ Générer les 10 QCM sur ce chapitre
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="genStatus" class="status"></div>
+    </div>
+
+    <!-- 3. Zone d'entraînement QCM -->
+    <div id="quizSection" class="card hidden">
+        <div class="quiz-header">
+            <span id="quizChapterTitle">Série d'entraînement</span>
+            <span id="timerDisplay">⏱️ 00:00</span>
+            <span id="finalScoreDisplay"></span>
+        </div>
+
+        <div id="qcmContainer"></div>
+
+        <div style="display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap;">
+            <button type="button" id="submitQuizBtn" class="btn btn-success" onclick="gradeQuiz()">✅ Terminer et afficher les corrigés</button>
+            <button type="button" class="btn btn-outline" onclick="exportJsonQuiz()">💾 Sauvegarder ce quiz (.json)</button>
+        </div>
+    </div>
+</div>
+
 <script>
-"use strict";
-const prompt = "Analyse le PDF de cours que je joins. Demande-moi le chapitre si je ne l’indique pas. Prépare 5 QCM inédits pour une étudiante en 3ᵉ année de médecine à Toulouse. Calque le niveau, les formulations et les types de distracteurs sur les QCM types du chapitre ou sur les exemples que je joins. Utilise le cours pour établir les réponses. Reprends les conventions des exemples et évite les passages ambigus ou contradictoires.\n\nChaque QCM doit afficher cinq propositions A à E, avec une ou plusieurs réponses exactes. Varie le nombre de bonnes réponses et la difficulté. Formule des propositions indépendantes : aucune référence à la lettre ou à la position d’une autre proposition. Le quiz mélange les propositions automatiquement. Une proposition de synthèse en E est facultative et ponctuelle. Utilise « toutes_fausses » quand les quatre propositions sont fausses, ou « toutes_vraies » quand elles sont toutes vraies. Dans ce second cas, A, B, C, D et E sont toutes considérées comme exactes.\n\nPour chaque proposition, donne une justification pédagogique et le numéro de la page du PDF (première page = 1), y compris pour les propositions vraies. Vérifie chaque réponse et chaque renvoi avant de livrer. Si un passage ou un schéma est illisible, utilise uniquement les éléments lisibles et demande l’image si elle est indispensable.\n\nLivre un fichier téléchargeable .json en UTF-8. À défaut, donne le JSON complet dans un seul bloc à copier. Le format est un objet avec « version » (nombre 1), « titre » (texte), « source » (texte), « questions » (liste de 5 objets). Chaque question a « enonce » (texte) et « propositions » (liste de 5 objets). Chaque proposition a « texte » (texte), « vrai » (booléen true ou false), « explication » (texte) et « page » (entier positif). Pour une question avec une synthèse en E, ajoute à la question le champ « synthese » avec la valeur « toutes_fausses » ou « toutes_vraies » et fournis exactement 4 objets dans « propositions ». Le quiz construit la proposition E.\n";
-const get = id => document.getElementById(id);
-const letters = "ABCDE";
-const summaries = {
-  toutes_fausses: "Toutes les propositions A à D sont fausses.",
-  toutes_vraies: "Toutes les propositions A à D sont vraies."
-};
-const validText = value => typeof value === "string" && value.trim().length > 0;
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
-function validate(bank) {
-  if (bank?.version !== 1 || !validText(bank.titre) || !validText(bank.source) ||
-      !Array.isArray(bank.questions) || !bank.questions.length) {
-    throw new Error("Le JSON doit contenir la version 1, un titre, une source et des questions.");
-  }
-  bank.questions.forEach((q, index) => {
-    const label = "Question " + (index + 1) + " — ";
-    if (!q || !validText(q.enonce) || !Array.isArray(q.propositions)) {
-      throw new Error(label + "énoncé ou propositions manquants.");
-    }
-    const summary = q.synthese !== undefined;
-    if (summary && !Object.hasOwn(summaries, q.synthese)) {
-      throw new Error(label + "type de synthèse en E inconnu.");
-    }
-    if (q.propositions.length !== (summary ? 4 : 5)) {
-      throw new Error(label + (summary ? "quatre propositions sont requises avec la synthèse en E." : "cinq propositions sont requises."));
-    }
-    if (q.propositions.some(p => !p || !validText(p.texte) || typeof p.vrai !== "boolean" ||
-        !validText(p.explication) || !Number.isInteger(p.page) || p.page < 1)) {
-      throw new Error(label + "chaque proposition exige un texte, un booléen vrai, une explication et une page positive.");
-    }
-    if (summary && !q.propositions.every(p => p.vrai === (q.synthese === "toutes_vraies"))) {
-      throw new Error(label + "les réponses contredisent la proposition de synthèse en E.");
-    }
-    if (!summary && !q.propositions.some(p => p.vrai)) {
-      throw new Error(label + "il faut au moins une proposition exacte.");
-    }
-  });
-  return bank;
-}
+    let currentPdfDoc = null;
+    let currentPdfName = '';
+    let detectedChapters = [];
+    let selectedChapterTitle = 'Chapitre sélectionné';
+    let currentQcmData = [];
+    let timerInterval = null;
+    let secondsElapsed = 0;
 
-function shuffled(items) {
-  const order = [...items];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return order;
-}
+    window.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash;
+        if (hash && hash.includes('api_key=')) {
+            const params = new URLSearchParams(hash.substring(1));
+            const keyFromUrl = params.get('api_key');
+            if (keyFromUrl) {
+                localStorage.setItem('gemini_api_key', keyFromUrl.trim());
+                history.replaceState(null, null, window.location.pathname + window.location.search);
+                showStatus('apiStatus', 'Clé API importée et mémorisée automatiquement.', 'success');
+            }
+        }
 
-let bank, attempt, choices, current;
-function start(nextBank) {
-  bank = nextBank;
-  attempt = shuffled(bank.questions).map(q => {
-    const options = shuffled(q.propositions);
-    if (q.synthese) {
-      options.push({
-        texte: summaries[q.synthese],
-        vrai: true,
-        explication: q.synthese === "toutes_vraies"
-          ? "Les quatre propositions sont vraies. Les cinq cases doivent être cochées."
-          : "Les quatre propositions sont fausses. Seule la case E doit être cochée."
-      });
-    }
-    return {...q, options};
-  });
-  choices = attempt.map(() => new Set());
-  current = 0;
-  get("title").textContent = bank.titre;
-  get("source").textContent = bank.source;
-  renderQuestion();
-}
+        const savedKey = localStorage.getItem('gemini_api_key');
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+            showStatus('apiStatus', 'Clé API prête et enregistrée dans ce navigateur.', 'success');
+        }
 
-function el(tag, value, className) {
-  const element = document.createElement(tag);
-  if (value !== undefined) element.textContent = value;
-  if (className) element.className = className;
-  return element;
-}
-function button(text, action, className) {
-  const b = el("button", text, className);
-  b.type = "button";
-  b.addEventListener("click", action);
-  return b;
-}
-function move(index) {
-  current = index;
-  renderQuestion();
-  get("question").focus();
-}
-function renderQuestion() {
-  const quiz = get("quiz");
-  const q = attempt[current];
-  const row = el("div", undefined, "progress-row");
-  const count = el("span");
-  count.setAttribute("aria-live", "polite");
-  row.append(el("span", "Question " + (current + 1) + " sur " + attempt.length), count);
-  const progress = el("progress");
-  progress.max = attempt.length;
-  progress.setAttribute("aria-label", "Questions avec une réponse");
-  const nav = el("nav", undefined, "tabs");
-  nav.setAttribute("aria-label", "Questions");
-  const tabs = attempt.map((_, index) => {
-    const b = button(String(index + 1), () => move(index));
-    if (index === current) b.setAttribute("aria-current", "true");
-    nav.append(b);
-    return b;
-  });
-  function updateProgress() {
-    const answered = choices.filter(set => set.size).length;
-    count.textContent = answered + " sur " + attempt.length + " avec une réponse";
-    progress.value = answered;
-    tabs.forEach((tab, index) => {
-      const done = choices[index].size > 0;
-      tab.dataset.answered = done;
-      tab.setAttribute("aria-label", "Question " + (index + 1) + (done ? ", avec une réponse" : ", sans réponse"));
+        // Glisser-déposer (Drag & Drop)
+        const dz = document.getElementById('dropzone');
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processPdfFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Support du Ctrl+V / Cmd+V pour coller directement un fichier PDF copié
+        window.addEventListener('paste', (e) => {
+            if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+                const file = e.clipboardData.files[0];
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    e.preventDefault();
+                    processPdfFile(file);
+                }
+            }
+        });
+
+        document.getElementById('qcmCount').addEventListener('change', (e) => {
+            document.getElementById('generateBtn').textContent = `✨ Générer les ${e.target.value} QCM sur ce chapitre`;
+        });
     });
-  }
-  const card = el("section", undefined, "card");
-  const heading = el("h2", q.enonce);
-  heading.id = "question";
-  heading.tabIndex = -1;
-  card.setAttribute("aria-labelledby", heading.id);
-  card.append(heading, el("p", "Coche toutes les propositions exactes.", "muted"));
-  q.options.forEach((p, index) => {
-    const label = el("label", undefined, "option");
-    const input = el("input");
-    input.type = "checkbox";
-    input.checked = choices[current].has(index);
-    input.addEventListener("change", () => {
-      if (input.checked) choices[current].add(index);
-      else choices[current].delete(index);
-      updateProgress();
-    });
-    label.append(input, el("span", letters[index] + ".", "letter"), el("span", p.texte));
-    card.append(label);
-  });
-  const actions = el("div", undefined, "actions");
-  const previous = button("Précédente", () => move(current - 1));
-  previous.disabled = current === 0;
-  actions.append(previous);
-  if (current < attempt.length - 1) actions.append(button("Suivante", () => move(current + 1), "primary"));
-  actions.append(button("Terminer la série", confirmGrade, current === attempt.length - 1 ? "primary" : ""));
-  card.append(actions);
-  quiz.replaceChildren(row, progress, nav, card);
-  updateProgress();
-}
-function confirmGrade() {
-  const missing = choices.filter(set => !set.size).length;
-  get("confirm-text").textContent = missing
-    ? missing + (missing === 1 ? " question est sans réponse." : " questions sont sans réponse.") + " Tu peux encore les compléter."
-    : "Toutes les questions ont une réponse. Tu peux afficher le score et les explications.";
-  const dialog = get("confirm");
-  dialog.returnValue = "cancel";
-  dialog.showModal();
-}
-function renderResults() {
-  const exact = attempt.map((q, i) => q.options.every((p, j) => p.vrai === choices[i].has(j)));
-  const score = exact.filter(Boolean).length;
-  const card = el("div", undefined, "card");
-  const title = el("h2", "Score · " + score + " / " + attempt.length);
-  title.tabIndex = -1;
-  card.append(title, el("p", "Un point par question si toutes les cases attendues sont cochées et qu’aucune proposition fausse n’est cochée.", "muted"));
-  attempt.forEach((q, i) => {
-    const section = el("section", undefined, "review-section");
-    section.append(el("h3", (i + 1) + ". " + q.enonce));
-    const expected = q.options.map((p, j) => p.vrai ? letters[j] : "").filter(Boolean).join(", ");
-    const selected = [...choices[i]].sort().map(j => letters[j]).join(", ") || "aucune";
-    section.append(el("p", "Attendu · " + expected + " | Ton choix · " + selected, "muted"));
-    q.options.forEach((p, j) => {
-      const checked = choices[i].has(j);
-      const status = p.vrai ? (checked ? "Vrai · coché" : "Vrai · oublié") : (checked ? "Faux · coché" : "Faux · écarté");
-      const review = el("div", undefined, "review " + (p.vrai === checked ? "correct" : "error"));
-      review.append(el("strong", letters[j] + ". " + p.texte), el("p", status + " — " + p.explication));
-      if (p.page) review.append(el("p", "Page " + p.page + " du PDF", "ref"));
-      section.append(review);
-    });
-    card.append(section);
-  });
-  card.append(button("Refaire la série", () => moveAfterStart(bank), "primary"));
-  get("quiz").replaceChildren(card);
-  title.focus();
-  window.scrollTo(0, 0);
-}
-function moveAfterStart(nextBank) {
-  start(nextBank);
-  get("question").focus();
-  window.scrollTo(0, 0);
-}
-function importText(text) {
-  let nextBank;
-  try {
-    const clean = text.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");
-    nextBank = validate(JSON.parse(clean));
-  } catch (error) {
-    get("import-status").textContent = error instanceof SyntaxError ? "JSON illisible. Colle le bloc JSON complet généré par ChatGPT." : error.message;
-    return;
-  }
-  get("import-status").textContent = "";
-  get("bank-text").value = "";
-  get("import").open = false;
-  moveAfterStart(nextBank);
-}
 
-get("confirm").addEventListener("close", () => {
-  if (get("confirm").returnValue === "grade") renderResults();
-});
-get("open-import").addEventListener("click", () => {
-  get("import").open = true;
-  get("import").scrollIntoView({block:"start"});
-  get("copy").focus({preventScroll:true});
-});
-get("prompt").value = prompt;
-get("copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(prompt);
-    get("copy-status").textContent = "Consigne copiée.";
-  } catch {
-    get("prompt").hidden = false;
-    get("prompt").focus();
-    get("prompt").select();
-    get("copy-status").textContent = "Copie le texte sélectionné.";
-  }
-});
-get("load-text").addEventListener("click", () => importText(get("bank-text").value));
-get("bank-file").addEventListener("change", async event => {
-  const file = event.target.files[0];
-  event.target.value = "";
-  if (!file) return;
-  try {
-    importText(await file.text());
-  } catch {
-    get("import-status").textContent = "Impossible de lire ce fichier. Essaie de coller le JSON.";
-  }
-});
-start(validate(JSON.parse(get("initial-bank").textContent)));
+    function toggleConfig() {
+        document.getElementById('configCard').classList.toggle('hidden');
+    }
+
+    async function pasteApiKey() {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                document.getElementById('apiKeyInput').value = text.trim();
+                saveApiKey();
+            }
+        } catch (err) {
+            const input = document.getElementById('apiKeyInput');
+            input.focus();
+            showStatus('apiStatus', 'Faites Ctrl+V (ou clic droit > Coller) dans le champ texte à gauche, puis cliquez sur Enregistrer.', 'info');
+        }
+    }
+
+    function saveApiKey() {
+        const key = document.getElementById('apiKeyInput').value.trim();
+        if (!key) {
+            showStatus('apiStatus', 'Veuillez coller une clé API valide (commençant par AIzaSy...).', 'error');
+            return;
+        }
+        localStorage.setItem('gemini_api_key', key);
+        showStatus('apiStatus', 'Clé API enregistrée avec succès dans votre navigateur.', 'success');
+    }
+
+    function copyShareLink() {
+        const key = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_api_key');
+        if (!key) {
+            showStatus('apiStatus', 'Collez d’abord votre clé API avant de copier le lien.', 'error');
+            return;
+        }
+        const shareUrl = `${window.location.origin}${window.location.pathname}#api_key=${encodeURIComponent(key)}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showStatus('apiStatus', 'Lien pré-configuré copié ! Envoyez-le à votre fille pour son Mac.', 'success');
+        }).catch(() => {
+            showStatus('apiStatus', 'Lien généré : ' + shareUrl, 'info');
+        });
+    }
+
+    function showStatus(elementId, message, type) {
+        const el = document.getElementById(elementId);
+        el.textContent = message;
+        el.className = `status ${type}`;
+    }
+
+    function handlePdfUpload(event) {
+        if (event.target.files && event.target.files[0]) {
+            processPdfFile(event.target.files[0]);
+        }
+    }
+
+    async function processPdfFile(file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            showStatus('genStatus', 'Veuillez sélectionner un fichier au format PDF.', 'error');
+            return;
+        }
+
+        if (typeof pdfjsLib === 'undefined') {
+            showStatus('genStatus', 'Erreur : la bibliothèque PDF.js n’a pas pu se charger (vérifiez votre connexion internet).', 'error');
+            return;
+        }
+
+        currentPdfName = file.name;
+        showStatus('genStatus', 'Lecture du PDF et détection automatique des chapitres en cours...', 'info');
+        document.getElementById('chaptersSection').classList.add('hidden');
+        document.getElementById('quizSection').classList.add('hidden');
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            currentPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const totalPages = currentPdfDoc.numPages;
+
+            document.getElementById('pdfInfo').textContent = `Fichier chargé : ${file.name} (${totalPages} pages)`;
+            document.getElementById('startPage').max = totalPages;
+            document.getElementById('endPage').max = totalPages;
+
+            detectedChapters = await detectChapters(currentPdfDoc, totalPages);
+
+            renderChaptersList(detectedChapters);
+            document.getElementById('chaptersSection').classList.remove('hidden');
+            showStatus('genStatus', `${detectedChapters.length} chapitre(s) identifié(s). Cochez celui que vous voulez réviser puis cliquez sur Générer.`, 'success');
+        } catch (err) {
+            showStatus('genStatus', 'Erreur lors de la lecture du PDF : ' + err.message, 'error');
+        }
+    }
+
+    async function detectChapters(pdfDoc, totalPages) {
+        let chapters = [];
+
+        // 1. Signets internes du PDF
+        try {
+            const outline = await pdfDoc.getOutline();
+            if (outline && outline.length > 0) {
+                const rawItems = [];
+                for (const item of outline) {
+                    let pageNum = null;
+                    if (typeof item.dest === 'string') {
+                        const dest = await pdfDoc.getDestination(item.dest);
+                        if (dest && dest[0]) pageNum = (await pdfDoc.getPageIndex(dest[0])) + 1;
+                    } else if (Array.isArray(item.dest) && item.dest[0]) {
+                        pageNum = (await pdfDoc.getPageIndex(item.dest[0])) + 1;
+                    }
+                    if (pageNum && item.title) {
+                        rawItems.push({ title: item.title.trim(), startPage: pageNum });
+                    }
+                }
+                if (rawItems.length >= 2) {
+                    rawItems.sort((a, b) => a.startPage - b.startPage);
+                    for (let i = 0; i < rawItems.length; i++) {
+                        const endP = (i < rawItems.length - 1) ? Math.max(rawItems[i].startPage, rawItems[i + 1].startPage - 1) : totalPages;
+                        chapters.push({ title: rawItems[i].title, startPage: rawItems[i].startPage, endPage: endP });
+                    }
+                    return chapters;
+                }
+            }
+        } catch (e) {}
+
+        // 2. Extraction des 5 premières pages (Sommaire)
+        let frontMatterText = '';
+        const pagesToScan = Math.min(5, totalPages);
+        for (let p = 1; p <= pagesToScan; p++) {
+            const page = await pdfDoc.getPage(p);
+            const content = await page.getTextContent();
+            frontMatterText += `\n[Page ${p}]\n` + content.items.map(it => it.str).join(' ');
+        }
+
+        // Analyse IA du sommaire si clé API présente
+        const apiKey = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_api_key');
+        if (apiKey && frontMatterText.trim().length > 100) {
+            try {
+                const tocPrompt = `Analyse le début de ce polycopié / ronéo de médecine (${totalPages} pages au total) et extrais la liste exacte des chapitres ou cours avec leur page de début et page de fin.
+Si un sommaire est présent, déduis les plages de pages exactes (sans dépasser ${totalPages}).
+Texte des premières pages :
+${frontMatterText.slice(0, 14000)}`;
+
+                const schema = {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            title: { type: "STRING" },
+                            startPage: { type: "INTEGER" },
+                            endPage: { type: "INTEGER" }
+                        },
+                        required: ["title", "startPage", "endPage"]
+                    }
+                };
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: tocPrompt }] }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            responseMimeType: "application/json",
+                            responseSchema: schema
+                        }
+                    })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return parsed.map(c => ({
+                            title: c.title,
+                            startPage: Math.max(1, Math.min(totalPages, c.startPage)),
+                            endPage: Math.max(1, Math.min(totalPages, c.endPage))
+                        }));
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // 3. Détection par motifs textuels (ex: "Titre du cours .... 12")
+        const regexMatches = [];
+        const linePattern = /([A-ZÀ-Ÿ0-9][^\n]{4,70}?)\s*(?:\.{2,}|\s{2,}|–|-)\s*(\d{1,3})\b/g;
+        let match;
+        while ((match = linePattern.exec(frontMatterText)) !== null) {
+            const title = match[1].trim();
+            const pageNum = parseInt(match[2], 10);
+            if (pageNum >= 1 && pageNum <= totalPages && !/page|sommaire/i.test(title)) {
+                regexMatches.push({ title, startPage: pageNum });
+            }
+        }
+
+        if (regexMatches.length >= 2) {
+            regexMatches.sort((a, b) => a.startPage - b.startPage);
+            for (let i = 0; i < regexMatches.length; i++) {
+                const endP = (i < regexMatches.length - 1) ? Math.max(regexMatches[i].startPage, regexMatches[i + 1].startPage - 1) : totalPages;
+                chapters.push({ title: regexMatches[i].title, startPage: regexMatches[i].startPage, endPage: endP });
+            }
+            return chapters;
+        }
+
+        // 4. Découpage par tranches de 15 pages si aucun sommaire n'est détecté
+        const step = 15;
+        for (let p = 1; p <= totalPages; p += step) {
+            const endP = Math.min(totalPages, p + step - 1);
+            chapters.push({ title: `Module pages ${p} à ${endP}`, startPage: p, endPage: endP });
+        }
+        return chapters;
+    }
+
+    function renderChaptersList(chapters) {
+        const grid = document.getElementById('chaptersGrid');
+        grid.innerHTML = '';
+        document.getElementById('chapterCountBadge').textContent = `${chapters.length} chapitre(s) détecté(s)`;
+
+        chapters.forEach((chap, idx) => {
+            const card = document.createElement('label');
+            card.className = 'chapter-card' + (idx === 0 ? ' selected' : '');
+            card.innerHTML = `
+                <input type="radio" name="chapterSelect" value="${idx}" ${idx === 0 ? 'checked' : ''}>
+                <div class="chapter-info">
+                    <div class="chapter-title">${chap.title}</div>
+                    <span class="chapter-pages">Pages ${chap.startPage} à ${chap.endPage}</span>
+                </div>
+            `;
+
+            card.querySelector('input').addEventListener('change', () => {
+                document.querySelectorAll('.chapter-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectChapter(chap);
+            });
+
+            grid.appendChild(card);
+        });
+
+        if (chapters.length > 0) {
+            selectChapter(chapters[0]);
+        }
+    }
+
+    function selectChapter(chap) {
+        selectedChapterTitle = chap.title;
+        document.getElementById('startPage').value = chap.startPage;
+        document.getElementById('endPage').value = chap.endPage;
+    }
+
+    async function extractTextFromPages(start, end) {
+        let extractedText = '';
+        for (let p = start; p <= end; p++) {
+            const page = await currentPdfDoc.getPage(p);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            extractedText += `\n--- PAGE ${p} ---\n${pageText}`;
+        }
+        return extractedText;
+    }
+
+    async function generateQCM() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            document.getElementById('configCard').classList.remove('hidden');
+            showStatus('apiStatus', 'Veuillez d’abord coller votre clé API Gemini ci-dessus.', 'error');
+            document.getElementById('apiKeyInput').focus();
+            return;
+        }
+        localStorage.setItem('gemini_api_key', apiKey);
+
+        const start = parseInt(document.getElementById('startPage').value, 10);
+        const end = parseInt(document.getElementById('endPage').value, 10);
+        const count = parseInt(document.getElementById('qcmCount').value, 10);
+        const model = document.getElementById('modelSelect').value;
+
+        if (!currentPdfDoc || start < 1 || end > currentPdfDoc.numPages || start > end) {
+            showStatus('genStatus', 'Plage de pages invalide.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('generateBtn');
+        btn.disabled = true;
+        showStatus('genStatus', `Extraction du chapitre « ${selectedChapterTitle} » (pages ${start}-${end}) et génération des ${count} QCM...`, 'info');
+
+        try {
+            const courseText = await extractTextFromPages(start, end);
+
+            const systemPrompt = `Tu es un professeur de la Faculté de Médecine de Toulouse (Université Toulouse III - Paul Sabatier) rédigeant des QCM d'examen pour les étudiants de 3e année (DFASM1 / D1).
+RÈGLES STRICTES DE CONCEPTION :
+1. Génère exactement ${count} QCM basés EXCLUSIVEMENT sur le chapitre fourni (« ${selectedChapterTitle} »). Cible en priorité les notions clés, mécanismes physiopathologiques, valeurs seuils et points signalés comme importants ("QCM", "à retenir").
+2. Chaque QCM comporte obligatoirement 5 propositions : A, B, C, D, E.
+3. Ce sont des QCM à réponses multiples (1 à 5 bonnes réponses possibles).
+4. RÈGLE SPÉCIALE POUR L'ITEM E : Dans environ 25 à 30 % des QCM de la série, utilise la proposition E comme modalité récapitulative :
+   - "Toutes les propositions précédentes sont exactes" (dans ce cas A, B, C, D et E sont toutes vraies, donc correctAnswers = ["A","B","C","D","E"])
+   - OU "Aucune des propositions précédentes n'est exacte" (dans ce cas A, B, C et D sont toutes fausses, et seule E est vraie, donc correctAnswers = ["E"]).
+   Dans les 70 à 75 % restants, la proposition E doit être une proposition scientifique classique.
+5. Les distracteurs (propositions fausses) doivent reproduire les pièges classiques d'examen : inversions anatomiques ou physiologiques, confusion augmentation/diminution, glissement de concepts proches.
+6. Fournis un corrigé détaillé et pédagogique justifiant chaque proposition fausse.`;
+
+            const responseSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        question: { type: "STRING" },
+                        options: {
+                            type: "OBJECT",
+                            properties: {
+                                A: { type: "STRING" },
+                                B: { type: "STRING" },
+                                C: { type: "STRING" },
+                                D: { type: "STRING" },
+                                E: { type: "STRING" }
+                            },
+                            required: ["A", "B", "C", "D", "E"]
+                        },
+                        correctAnswers: {
+                            type: "ARRAY",
+                            items: { type: "STRING" }
+                        },
+                        explanation: { type: "STRING" }
+                    },
+                    required: ["question", "options", "correctAnswers", "explanation"]
+                }
+            };
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ parts: [{ text: `Contenu du chapitre (pages ${start} à ${end}) :\n\n${courseText}` }] }],
+                    generationConfig: {
+                        temperature: 0.2,
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || `Erreur HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            currentQcmData = JSON.parse(data.candidates[0].content.parts[0].text);
+
+            renderQuiz(currentQcmData);
+            showStatus('genStatus', `${currentQcmData.length} QCM générés sur « ${selectedChapterTitle} ».`, 'success');
+        } catch (err) {
+            showStatus('genStatus', 'Erreur lors de la génération : ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function renderQuiz(qcmList) {
+        const container = document.getElementById('qcmContainer');
+        container.innerHTML = '';
+        document.getElementById('quizChapterTitle').textContent = `Chapitre : ${selectedChapterTitle}`;
+        document.getElementById('finalScoreDisplay').textContent = '';
+        document.getElementById('submitQuizBtn').disabled = false;
+        document.getElementById('quizSection').classList.remove('hidden');
+
+        qcmList.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = 'qcm-block';
+            block.id = `qcm-${index}`;
+
+            let optionsHtml = '';
+            ['A', 'B', 'C', 'D', 'E'].forEach(letter => {
+                optionsHtml += `
+                    <label class="option-item" id="opt-${index}-${letter}">
+                        <input type="checkbox" name="qcm-${index}" value="${letter}" onchange="toggleOptionHighlight(this)">
+                        <span><strong>${letter}.</strong> ${item.options[letter]}</span>
+                    </label>
+                `;
+            });
+
+            block.innerHTML = `
+                <div class="qcm-title">QCM ${index + 1} — ${item.question}</div>
+                <div class="options-list">${optionsHtml}</div>
+                <div class="correction-box" id="corr-${index}"></div>
+            `;
+            container.appendChild(block);
+        });
+
+        startTimer();
+        document.getElementById('quizSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function toggleOptionHighlight(checkbox) {
+        const label = checkbox.closest('.option-item');
+        if (checkbox.checked) label.classList.add('checked-active');
+        else label.classList.remove('checked-active');
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        secondsElapsed = 0;
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const secs = String(secondsElapsed % 60).padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `⏱️ ${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function gradeQuiz() {
+        clearInterval(timerInterval);
+        let totalScore = 0;
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+
+        currentQcmData.forEach((item, index) => {
+            const checkboxes = document.querySelectorAll(`input[name="qcm-${index}"]`);
+            const userAnswers = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+            const correctAnswers = item.correctAnswers.map(c => c.toUpperCase());
+
+            let discordances = 0;
+            letters.forEach(letter => {
+                const isChecked = userAnswers.includes(letter);
+                const isCorrect = correctAnswers.includes(letter);
+                const optLabel = document.getElementById(`opt-${index}-${letter}`);
+                const input = optLabel.querySelector('input');
+                input.disabled = true;
+                optLabel.classList.remove('checked-active');
+
+                if (isChecked !== isCorrect) discordances++;
+
+                if (isChecked && isCorrect) {
+                    optLabel.classList.add('correct-checked');
+                    optLabel.insertAdjacentHTML('beforeend', '<span class="badge-tag tag-ok">Vrai ✓</span>');
+                } else if (!isChecked && isCorrect) {
+                    optLabel.classList.add('missed-correct');
+                    optLabel.insertAdjacentHTML('beforeend', '<span class="badge-tag tag-miss">Oublié (Vrai)</span>');
+                } else if (isChecked && !isCorrect) {
+                    optLabel.classList.add('wrong-checked');
+                    optLabel.insertAdjacentHTML('beforeend', '<span class="badge-tag tag-err">Faux ✗</span>');
+                }
+            });
+
+            let qScore = 0;
+            let badgeClass = 'score-0';
+            if (discordances === 0) { qScore = 1; badgeClass = 'score-1'; }
+            else if (discordances === 1) { qScore = 0.5; badgeClass = 'score-05'; }
+            else if (discordances === 2) { qScore = 0.2; badgeClass = 'score-02'; }
+
+            totalScore += qScore;
+
+            const corrBox = document.getElementById(`corr-${index}`);
+            corrBox.style.display = 'block';
+            corrBox.innerHTML = `
+                <span class="score-badge ${badgeClass}">Note : ${qScore} / 1 (${discordances} discordance${discordances > 1 ? 's' : ''})</span>
+                <div><strong>Combinaison exacte :</strong> ${correctAnswers.join(' - ')}</div>
+                <div style="margin-top: 8px; line-height: 1.55;"><strong>Corrigé détaillé :</strong> ${item.explanation}</div>
+            `;
+        });
+
+        const maxScore = currentQcmData.length;
+        const noteSur20 = ((totalScore / maxScore) * 20).toFixed(2);
+        document.getElementById('finalScoreDisplay').textContent = `Note finale : ${totalScore.toFixed(1)}/${maxScore} (${noteSur20}/20)`;
+        document.getElementById('submitQuizBtn').disabled = true;
+        document.getElementById('quizSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function exportJsonQuiz() {
+        if (!currentQcmData.length) return;
+        const payload = { chapter: selectedChapterTitle, qcms: currentQcmData };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QCM_${selectedChapterTitle.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.json`;
+        a.click();
+    }
+
+    function importJsonQuiz(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (Array.isArray(parsed)) {
+                    currentQcmData = parsed;
+                    selectedChapterTitle = file.name.replace('.json', '');
+                } else {
+                    currentQcmData = parsed.qcms;
+                    selectedChapterTitle = parsed.chapter || file.name.replace('.json', '');
+                }
+                renderQuiz(currentQcmData);
+                showStatus('genStatus', 'Quiz sauvegardé chargé avec succès.', 'success');
+            } catch (err) {
+                showStatus('genStatus', 'Fichier JSON invalide.', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
 </script>
+
 </body>
 </html>
