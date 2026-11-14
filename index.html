@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur QCM Médecine — D1 Toulouse</title>
+    <title>Générateur QCM Médecine — Toulouse</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
@@ -109,7 +109,7 @@
 
         .api-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
         .api-bar > div.key-col { flex: 2; min-width: 260px; }
-        .api-bar > div.model-col { flex: 1; min-width: 220px; }
+        .api-bar > div.model-col { flex: 1.3; min-width: 240px; }
 
         .status { padding: 11px 14px; border-radius: 9px; margin-top: 12px; font-size: 0.9rem; display: none; font-weight: 500; }
         .status.info { display: block; background: var(--primary-light); color: var(--primary); border: 1px solid #bfdbfe; }
@@ -167,8 +167,8 @@
 <div class="container">
     <header>
         <div>
-            <h1>Entraînement QCM — Médecine D1 (Toulouse)</h1>
-            <span>Détection automatique des chapitres • 10 QCM ciblés • Correction détaillée &amp; barème à discordances</span>
+            <h1>Entraînement QCM — Médecine (Toulouse)</h1>
+            <span>Détection automatique des chapitres • QCM ciblés • Correction détaillée &amp; barème à discordances</span>
         </div>
         <button type="button" class="btn btn-outline" style="background:white;" onclick="toggleConfig()">⚙️ Afficher / Masquer Clé API</button>
     </header>
@@ -188,14 +188,14 @@
                 </div>
             </div>
             <div class="model-col">
-                <label class="field-label" for="modelSelect">Modèle IA (bascule auto si saturé)</label>
+                <label class="field-label" for="modelSelect">Modèle IA (détecté sur votre compte)</label>
                 <select id="modelSelect">
-                    <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Recommandé)</option>
-                    <option value="gemini-3.8-flash-lite">Gemini 3.8 Flash-Lite (Haute dispo)</option>
-                    <option value="gemini-3.8-pro">Gemini 3.8 Pro (Approfondi)</option>
+                    <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+                    <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash</option>
                 </select>
             </div>
-            <button type="button" class="btn" onclick="saveApiKey()">💾 Enregistrer la clé</button>
+            <button type="button" class="btn" onclick="saveAndVerifyApiKey()">💾 Enregistrer &amp; Vérifier</button>
             <button type="button" class="btn btn-secondary" onclick="copyShareLink()" title="Génère un lien contenant la clé pour l'envoyer sur le Mac">🔗 Copier lien pour Mac</button>
         </div>
         <div id="apiStatus" class="status"></div>
@@ -290,8 +290,9 @@
     let currentQcmData = [];
     let timerInterval = null;
     let secondsElapsed = 0;
+    let availableAccountModels = [];
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
         const hash = window.location.hash;
         if (hash && hash.includes('api_key=')) {
             const params = new URLSearchParams(hash.substring(1));
@@ -299,14 +300,13 @@
             if (keyFromUrl) {
                 localStorage.setItem('gemini_api_key', keyFromUrl.trim());
                 history.replaceState(null, null, window.location.pathname + window.location.search);
-                showStatus('apiStatus', 'Clé API importée et mémorisée automatiquement.', 'success');
             }
         }
 
         const savedKey = localStorage.getItem('gemini_api_key');
         if (savedKey) {
             document.getElementById('apiKeyInput').value = savedKey;
-            showStatus('apiStatus', 'Clé API prête et enregistrée dans ce navigateur.', 'success');
+            await fetchAvailableModels(savedKey, true);
         }
 
         const dz = document.getElementById('dropzone');
@@ -344,7 +344,7 @@
             const text = await navigator.clipboard.readText();
             if (text) {
                 document.getElementById('apiKeyInput').value = text.trim();
-                saveApiKey();
+                await saveAndVerifyApiKey();
             }
         } catch (err) {
             const input = document.getElementById('apiKeyInput');
@@ -353,14 +353,79 @@
         }
     }
 
-    function saveApiKey() {
+    async function saveAndVerifyApiKey() {
         const key = document.getElementById('apiKeyInput').value.trim();
         if (!key) {
-            showStatus('apiStatus', 'Veuillez coller une clé API valide (commençant par AIzaSy...).', 'error');
+            showStatus('apiStatus', 'Veuillez coller une clé API valide (commence par AIzaSy...).', 'error');
             return;
         }
         localStorage.setItem('gemini_api_key', key);
-        showStatus('apiStatus', 'Clé API enregistrée avec succès dans votre navigateur.', 'success');
+        await fetchAvailableModels(key, false);
+    }
+
+    // Interroge l'API Google pour lister uniquement les modèles réellement actifs sur votre clé
+    async function fetchAvailableModels(apiKey, silentInit) {
+        if (!silentInit) {
+            showStatus('apiStatus', 'Vérification de la clé et chargement des modèles disponibles sur votre compte...', 'info');
+        }
+        try {
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.error?.message || `Erreur HTTP ${resp.status}`);
+            }
+
+            const models = (data.models || [])
+                .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+                .map(m => ({
+                    id: m.name.replace(/^models\//, ''),
+                    displayName: m.displayName || m.name.replace(/^models\//, '')
+                }))
+                .filter(m => !/embedding|aqa|imagen|veo|tts|audio|robotics|computer-use/i.test(m.id));
+
+            // Tri par pertinence pour la génération de QCM (Flash récents en priorité, puis Pro, puis Gemma)
+            models.sort((a, b) => {
+                const score = (id) => {
+                    if (/gemini-3\.8-flash$/i.test(id)) return 100;
+                    if (/gemini-3.*flash/i.test(id)) return 95;
+                    if (/gemini-2\.5-flash$/i.test(id)) return 90;
+                    if (/gemini-2\.5-flash-lite/i.test(id)) return 85;
+                    if (/gemini-2\.0-flash$/i.test(id)) return 80;
+                    if (/gemini-3.*pro/i.test(id)) return 75;
+                    if (/gemini-2\.5-pro/i.test(id)) return 70;
+                    if (/gemini/i.test(id)) return 60;
+                    if (/gemma-3-27b/i.test(id)) return 50;
+                    return 30;
+                };
+                return score(b.id) - score(a.id);
+            });
+
+            if (models.length > 0) {
+                availableAccountModels = models.map(m => m.id);
+                const select = document.getElementById('modelSelect');
+                const previousChoice = select.value;
+                select.innerHTML = '';
+
+                models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.id}`;
+                    select.appendChild(opt);
+                });
+
+                if (availableAccountModels.includes(previousChoice)) {
+                    select.value = previousChoice;
+                } else {
+                    select.value = availableAccountModels[0];
+                }
+
+                showStatus('apiStatus', `Clé API vérifiée (${models.length} modèles disponibles sur votre compte). Modèle sélectionné : ${select.value}.`, 'success');
+            } else {
+                showStatus('apiStatus', 'Clé enregistrée, mais aucun modèle texte compatible n’a été retourné par l’API.', 'error');
+            }
+        } catch (err) {
+            showStatus('apiStatus', 'Erreur lors de la vérification de la clé API : ' + err.message, 'error');
+        }
     }
 
     function copyShareLink() {
@@ -387,10 +452,51 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Appel API résilient : réessaie automatiquement en cas de pic de charge (503/429) et bascule sur un modèle alternatif si nécessaire
-    async function callGeminiWithResilience(apiKey, preferredModel, payload, statusElementId) {
-        const candidateModels = [preferredModel, 'gemini-3.8-flash-lite', 'gemini-3.8-flash', 'gemini-3.8-pro']
-            .filter((m, idx, arr) => arr.indexOf(m) === idx);
+    // Construit un payload adapté au modèle (Gemma ne supporte pas toujours systemInstruction ni responseSchema)
+    function buildPayloadForModel(modelId, systemPrompt, userPrompt, responseSchema, temperature) {
+        const isGemma = /^gemma/i.test(modelId);
+        if (isGemma) {
+            const jsonInstruction = `\n\nIMPORTANT : Réponds UNIQUEMENT avec un tableau JSON valide (sans texte avant ni après, sans balises markdown), conforme à cette structure :\n[{"question": "...", "options": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."}, "correctAnswers": ["A", "C"], "explanation": "..."}]`;
+            return {
+                contents: [{ parts: [{ text: systemPrompt + jsonInstruction + '\n\n' + userPrompt }] }],
+                generationConfig: {
+                    temperature: temperature,
+                    maxOutputTokens: 8192
+                }
+            };
+        }
+
+        const payload = {
+            contents: [{ parts: [{ text: userPrompt }] }],
+            generationConfig: {
+                temperature: temperature,
+                maxOutputTokens: 8192
+            }
+        };
+
+        if (systemPrompt) {
+            payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+        }
+        if (responseSchema) {
+            payload.generationConfig.responseMimeType = "application/json";
+            payload.generationConfig.responseSchema = responseSchema;
+        }
+        return payload;
+    }
+
+    // Appel résilient qui bascule automatiquement sur les modèles disponibles du compte en cas de saturation (503/429) ou d'indisponibilité (404)
+    async function callGeminiWithResilience(apiKey, preferredModel, systemPrompt, userPrompt, responseSchema, temperature, statusElementId) {
+        if (availableAccountModels.length === 0) {
+            await fetchAvailableModels(apiKey, true);
+        }
+
+        const fallbackPool = availableAccountModels.length > 0
+            ? availableAccountModels
+            : [preferredModel, 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemma-3-27b-it'];
+
+        const candidateModels = [preferredModel, ...fallbackPool]
+            .filter((m, idx, arr) => m && arr.indexOf(m) === idx)
+            .slice(0, 6);
 
         let lastError = null;
 
@@ -400,49 +506,79 @@
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    const payload = buildPayloadForModel(model, systemPrompt, userPrompt, responseSchema, temperature);
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
+                    const data = await response.json().catch(() => ({}));
+
                     if (response.ok) {
-                        const data = await response.json();
-                        return { data, usedModel: model };
+                        const candidate = data.candidates && data.candidates[0];
+                        if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts.length) {
+                            const reason = candidate?.finishReason || data.promptFeedback?.blockReason || 'Réponse vide';
+                            throw new Error(`Le modèle ${model} n'a renvoyé aucun contenu (motif : ${reason}).`);
+                        }
+                        if (candidate.finishReason === 'MAX_TOKENS') {
+                            throw new Error(`La réponse de ${model} a été tronquée (limite de longueur atteinte). Réduisez le nombre de QCM à 5 ou réduisez la plage de pages.`);
+                        }
+                        const rawText = candidate.content.parts.map(p => p.text || '').join('');
+                        return { rawText, usedModel: model };
                     }
 
-                    const errData = await response.json().catch(() => ({}));
-                    const errMsg = errData.error?.message || `Erreur HTTP ${response.status}`;
-                    const isTransient = response.status === 503 || response.status === 429 ||
-                        /high demand|overloaded|temporarily unavailable|try again/i.test(errMsg);
+                    const errMsg = data.error?.message || `Erreur HTTP ${response.status}`;
+                    lastError = new Error(`[${model}] ${errMsg}`);
 
-                    lastError = new Error(errMsg);
-
-                    if (!isTransient) {
+                    // Erreur d'authentification -> inutile de tester d'autres modèles
+                    if (response.status === 401 || response.status === 403 || /API key not valid/i.test(errMsg)) {
                         throw lastError;
                     }
 
-                    if (attempt < maxAttempts) {
+                    // Surcharge temporaire (503 / 429) -> attendre 2.5s puis essayer le modèle suivant
+                    const isOverloaded = response.status === 503 || response.status === 429 || /high demand|overloaded|quota|rate limit|try again/i.test(errMsg);
+                    if (isOverloaded && attempt < maxAttempts) {
                         if (statusElementId) {
-                            showStatus(statusElementId, `Pic de charge temporaire sur ${model}. Nouvelle tentative automatique dans 3 secondes...`, 'info');
+                            showStatus(statusElementId, `Pic de charge sur ${model}. Nouvelle tentative dans 2,5 secondes...`, 'info');
                         }
-                        await sleep(3000);
-                    } else if (mIdx < candidateModels.length - 1) {
-                        const nextModel = candidateModels[mIdx + 1];
-                        if (statusElementId) {
-                            showStatus(statusElementId, `Serveur ${model} saturé — bascule automatique vers ${nextModel}...`, 'info');
-                        }
+                        await sleep(2500);
+                        continue;
                     }
+
+                    if (mIdx < candidateModels.length - 1 && statusElementId) {
+                        showStatus(statusElementId, `${model} indisponible ou saturé — bascule automatique vers ${candidateModels[mIdx + 1]}...`, 'info');
+                    }
+                    break;
                 } catch (err) {
                     lastError = err;
-                    const isTransient = /high demand|overloaded|temporarily unavailable|try again|Failed to fetch/i.test(err.message);
-                    if (!isTransient) throw err;
+                    if (/API key not valid|tronquée/i.test(err.message)) {
+                        throw err;
+                    }
+                    break;
                 }
             }
         }
 
-        throw lastError || new Error('Les serveurs Gemini sont temporairement saturés. Réessayez dans quelques instants.');
+        throw lastError || new Error('Aucun modèle n’a pu répondre. Vérifiez votre clé API ou réessayez dans quelques instants.');
+    }
+
+    function parseJsonSafely(rawText) {
+        let cleaned = rawText.trim();
+        // Retirer d'éventuelles balises markdown ```json ... ```
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        try {
+            return JSON.parse(cleaned);
+        } catch (e) {
+            // Extraire le premier tableau JSON [...] trouvé dans la réponse
+            const firstBracket = cleaned.indexOf('[');
+            const lastBracket = cleaned.lastIndexOf(']');
+            if (firstBracket !== -1 && lastBracket > firstBracket) {
+                return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
+            }
+            throw new Error('Le modèle a renvoyé un format non exploitable : ' + e.message);
+        }
     }
 
     function handlePdfUpload(event) {
@@ -529,7 +665,7 @@
     async function detectChapters(pdfDoc, totalPages) {
         let chapters = [];
 
-        // 1. Signets internes du PDF (Outline / Bookmarks)
+        // 1. Signets internes du PDF
         try {
             const outline = await pdfDoc.getOutline();
             if (outline && outline.length > 0) {
@@ -557,7 +693,7 @@
             }
         } catch (e) {}
 
-        // 2. Extraction ligne par ligne des 8 premières pages (Sommaire) + repérage des titres principaux
+        // 2. Extraction ligne par ligne des 8 premières pages + repérage des titres principaux
         let frontMatterText = '';
         const pagesToScan = Math.min(8, totalPages);
         for (let p = 1; p <= pagesToScan; p++) {
@@ -594,7 +730,7 @@
             }
         }
 
-        // 4. Analyse via Gemini avec bascule automatique en cas de surcharge
+        // 4. Analyse via Gemini avec bascule automatique
         const apiKey = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('gemini_api_key');
         if (apiKey && frontMatterText.trim().length > 80) {
             try {
@@ -626,20 +762,21 @@ ${pageHeadings.slice(0, 80).join('\n')}`;
                 };
 
                 const preferredModel = document.getElementById('modelSelect').value;
-                const { data } = await callGeminiWithResilience(apiKey, preferredModel, {
-                    contents: [{ parts: [{ text: tocPrompt }] }],
-                    generationConfig: {
-                        temperature: 0.1,
-                        responseMimeType: "application/json",
-                        responseSchema: schema
-                    }
-                }, null);
+                const { rawText } = await callGeminiWithResilience(
+                    apiKey,
+                    preferredModel,
+                    null,
+                    tocPrompt,
+                    schema,
+                    0.1,
+                    null
+                );
 
-                const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                const parsed = parseJsonSafely(rawText);
                 if (Array.isArray(parsed) && parsed.length >= 2) {
                     return parsed.map(c => {
-                        const s = Math.max(1, Math.min(totalPages, c.startPage));
-                        const e = Math.max(s, Math.min(totalPages, c.endPage));
+                        const s = Math.max(1, Math.min(totalPages, parseInt(c.startPage, 10) || 1));
+                        const e = Math.max(s, Math.min(totalPages, parseInt(c.endPage, 10) || totalPages));
                         return { title: c.title, startPage: s, endPage: e };
                     });
                 }
@@ -731,12 +868,16 @@ ${pageHeadings.slice(0, 80).join('\n')}`;
 
         const btn = document.getElementById('generateBtn');
         btn.disabled = true;
-        showStatus('genStatus', `Extraction du chapitre « ${selectedChapterTitle} » (pages ${start}-${end}) et génération des ${count} QCM...`, 'info');
+        showStatus('genStatus', `Extraction du chapitre « ${selectedChapterTitle} » (pages ${start}-${end}) et génération des ${count} QCM via ${model}...`, 'info');
 
         try {
             const courseText = await extractTextFromPages(start, end);
 
-            const systemPrompt = `Tu es un professeur de la Faculté de Médecine de Toulouse (Université Toulouse III - Paul Sabatier) rédigeant des QCM d'examen pour les étudiants de 3e année (DFASM1 / D1).
+            if (courseText.replace(/--- PAGE \d+ ---/g, '').trim().length < 50) {
+                throw new Error('Aucun texte exploitable détecté sur ces pages (ce PDF semble être un document scanné sous forme d’images sans couche texte).');
+            }
+
+            const systemPrompt = `Tu es un professeur de la Faculté de Médecine de Toulouse (Université Toulouse III - Paul Sabatier) rédigeant des QCM d'examen pour les étudiants de médecine.
 RÈGLES STRICTES DE CONCEPTION :
 1. Génère exactement ${count} QCM basés EXCLUSIVEMENT sur le chapitre fourni (« ${selectedChapterTitle} »). Cible en priorité les notions clés, mécanismes physiopathologiques, valeurs seuils et points signalés comme importants ("QCM", "à retenir").
 2. Chaque QCM comporte obligatoirement 5 propositions : A, B, C, D, E.
@@ -775,21 +916,27 @@ RÈGLES STRICTES DE CONCEPTION :
                 }
             };
 
-            const { data, usedModel } = await callGeminiWithResilience(apiKey, model, {
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ parts: [{ text: `Contenu du chapitre (pages ${start} à ${end}) :\n\n${courseText}` }] }],
-                generationConfig: {
-                    temperature: 0.2,
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema
-                }
-            }, 'genStatus');
+            const { rawText, usedModel } = await callGeminiWithResilience(
+                apiKey,
+                model,
+                systemPrompt,
+                `Contenu du chapitre (pages ${start} à ${end}) :\n\n${courseText.slice(0, 90000)}`,
+                responseSchema,
+                0.2,
+                'genStatus'
+            );
 
-            currentQcmData = JSON.parse(data.candidates[0].content.parts[0].text);
+            const parsed = parseJsonSafely(rawText);
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+                throw new Error('Aucun QCM valide trouvé dans la réponse du modèle.');
+            }
 
+            currentQcmData = parsed;
             renderQuiz(currentQcmData);
-            const fallbackNote = (usedModel !== model) ? ` (généré via ${usedModel} suite à un pic de charge)` : '';
-            showStatus('genStatus', `${currentQcmData.length} QCM générés sur « ${selectedChapterTitle} »${fallbackNote}.`, 'success');
+            const modelInfo = (usedModel !== model)
+                ? ` (généré automatiquement via ${usedModel} car ${model} était saturé)`
+                : ` (modèle : ${usedModel})`;
+            showStatus('genStatus', `${currentQcmData.length} QCM générés sur « ${selectedChapterTitle} »${modelInfo}.`, 'success');
         } catch (err) {
             showStatus('genStatus', 'Erreur lors de la génération : ' + err.message, 'error');
         } finally {
@@ -857,7 +1004,7 @@ RÈGLES STRICTES DE CONCEPTION :
         currentQcmData.forEach((item, index) => {
             const checkboxes = document.querySelectorAll(`input[name="qcm-${index}"]`);
             const userAnswers = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-            const correctAnswers = item.correctAnswers.map(c => c.toUpperCase());
+            const correctAnswers = (item.correctAnswers || []).map(c => c.toUpperCase());
 
             let discordances = 0;
             letters.forEach(letter => {
